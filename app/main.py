@@ -64,8 +64,9 @@ def generate_digit():
             status_code=503,
             detail="Generator weights not loaded. Run train_gan.py first.",
         )
-    img_tensor = generate_sample(_generator, device=DEVICE)  # (1, 64, 64) uint8
-    pil_img = Image.fromarray(img_tensor.squeeze(0).cpu().numpy(), mode="L")
+    img_tensor = generate_sample(_generator, device=DEVICE)  # (28, 28) float in [0, 1]
+    img_array = (img_tensor * 255).clamp(0, 255).byte().cpu().numpy()
+    pil_img = Image.fromarray(img_array, mode="L")
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
     buf.seek(0)
