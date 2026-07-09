@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# UV
+.uv/
+
+# Training artifacts
+data/
+app/generator.pth
+
+# Misc
+.DS_Store
+*.log
