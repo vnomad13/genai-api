@@ -9,7 +9,7 @@ def swish(x):
 class EnergyModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2, padding=2)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
         self.conv4 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1)
@@ -47,12 +47,12 @@ class Buffer:
     def __init__(self, model, device):
         self.model = model
         self.device = device
-        self.examples = [torch.rand((1, 1, 32, 32), device=device) * 2 - 1 for _ in range(128)]
+        self.examples = [torch.rand((1, 3, 32, 32), device=device) * 2 - 1 for _ in range(128)]
 
     def sample_new_exmps(self, steps, step_size, noise):
         import numpy as np, random
         n_new = np.random.binomial(128, 0.05)
-        new_rand_imgs = torch.rand((n_new, 1, 32, 32), device=self.device) * 2 - 1
+        new_rand_imgs = torch.rand((n_new, 3, 32, 32), device=self.device) * 2 - 1
         old_imgs = torch.cat(random.choices(self.examples, k=128 - n_new), dim=0)
         inp_imgs = torch.cat([new_rand_imgs, old_imgs], dim=0)
         new_imgs = generate_energy_samples(self.model, inp_imgs, steps, step_size, noise)

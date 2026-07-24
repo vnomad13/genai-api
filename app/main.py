@@ -93,7 +93,7 @@ def generate_energy():
     device = 'cpu'
     model = EnergyModel().to(device)
     model.load_state_dict(torch.load('weights/energy_model.pth', map_location='cpu'))
-    x = torch.rand((1, 1, 32, 32), device=device) * 2 - 1
+    x = torch.rand((1, 3, 32, 32), device=device) * 2 - 1
     out = generate_energy_samples(model, x, steps=256, step_size=10.0, noise_std=0.01)
     img = (out[0] + 1) / 2  # [-1,1] -> [0,1]
     return StreamingResponse(_tensor_to_png(img), media_type="image/png")
@@ -103,10 +103,10 @@ def generate_energy():
 def generate_diffusion():
     device = 'cpu'
     ckpt = torch.load('weights/diffusion.pth', map_location='cpu')
-    unet = UNet(64, 3, 64)
+    unet = UNet(32, 3, 64)
     model = DiffusionModel(unet).to(device)
     model.network.load_state_dict(ckpt['network'])
     model.ema_network.load_state_dict(ckpt['network'])   # load trained weights into BOTH
     model.set_normalizer(ckpt['mean'].to(device), ckpt['std'].to(device))
-    out = model.generate(num_images=1, diffusion_steps=20, image_size=64)
+    out = model.generate(num_images=1, diffusion_steps=20, image_size=32)
     return StreamingResponse(_tensor_to_png(out[0]), media_type="image/png")

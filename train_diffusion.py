@@ -1,17 +1,18 @@
-"""Train the UNet diffusion model on Flowers102 and save weights to weights/diffusion.pth."""
+"""Train the UNet diffusion model on CIFAR-10 and save weights to weights/diffusion.pth."""
 
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
-from torchvision.datasets import Flowers102
-from torch.utils.data import DataLoader, ConcatDataset
+from torchvision.datasets import CIFAR10
+from torch.utils.data import DataLoader
 
 from diffusion_model import UNet, DiffusionModel
 
-EPOCHS = 100
+EPOCHS = 20
 BATCH_SIZE = 64
+IMAGE_SIZE = 32
 WEIGHTS_DIR = Path("weights")
 WEIGHTS_OUT = WEIGHTS_DIR / "diffusion.pth"
 
@@ -37,20 +38,14 @@ def main():
     print(f"Training on {device} for {EPOCHS} epoch(s)...")
 
     transform = T.Compose([
-        T.CenterCrop(340),
-        T.Resize((64, 64)),
-        T.ToTensor(),
+        T.ToTensor(),                   # CIFAR-10 is already 32x32
     ])
-    # all three splits: 1020 train + 1020 val + 6149 test = 8189 images
-    dataset = ConcatDataset([
-        Flowers102(root="data", split=split, download=True, transform=transform)
-        for split in ("train", "val", "test")
-    ])
+    dataset = CIFAR10(root="data", train=True, download=True, transform=transform)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True,
                             num_workers=4, persistent_workers=True)
     print(f"Dataset: {len(dataset)} images, {len(dataloader)} batches/epoch")
 
-    unet = UNet(64, 3, 64)
+    unet = UNet(IMAGE_SIZE, 3, 64)
     model = DiffusionModel(unet)
     model.to(device)
 

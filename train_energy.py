@@ -1,10 +1,10 @@
-"""Train the Energy-Based Model on MNIST and save weights to weights/energy_model.pth."""
+"""Train the Energy-Based Model on CIFAR-10 and save weights to weights/energy_model.pth."""
 
 from pathlib import Path
 
 import torch
 import torchvision.transforms as T
-from torchvision.datasets import MNIST
+from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 
 from energy_model import EnergyModel, EBM
@@ -20,11 +20,10 @@ def main():
     print(f"Training on {device} for {EPOCHS} epoch(s)...")
 
     transform = T.Compose([
-        T.Pad(2, -1),                   # 28x28 → 32x32
-        T.ToTensor(),
-        T.Normalize((0.5,), (0.5,)),    # → [-1, 1]
+        T.ToTensor(),                                          # CIFAR-10 is already 32x32
+        T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),         # → [-1, 1]
     ])
-    dataset = MNIST(root="data", train=True, download=True, transform=transform)
+    dataset = CIFAR10(root="data", train=True, download=True, transform=transform)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
     model = EnergyModel().to(device)
