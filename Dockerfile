@@ -2,16 +2,18 @@ FROM python:3.12-slim
 
 WORKDIR /workspace
 
-RUN pip install uv
+RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml .
-
+# CPU-only torch/torchvision first: large and rarely changes, so this layer stays cached
 RUN uv pip install --system --no-cache torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Whole project: app/, weights/, and the course-reference model modules at the root
+# (energy_model.py / diffusion_model.py are imported directly by app/main.py)
+COPY . .
+
+# Remaining deps come from pyproject.toml: fastapi, uvicorn, spacy, pillow, numpy
 RUN uv pip install --system --no-cache .
 RUN python -m spacy download en_core_web_md
-
-COPY app/ ./app/
-COPY app/generator.pth ./app/generator.pth
 
 EXPOSE 8000
 
