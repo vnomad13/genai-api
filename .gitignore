@@ -15,8 +15,7 @@ app/generator.pth
 
 # GPT-2 checkpoints: model.safetensors is 475 MB, over GitHub's 100 MB file limit.
 # Regenerate with `python train_llm.py` then `python rl_format.py --format one_word`.
-weights/gpt2_squad/
-weights/gpt2_rl_*/
+weights/gpt2_*/
 
 # Misc
 .DS_Store

@@ -38,12 +38,52 @@ BASE_DIR = Path("weights/gpt2_squad")       # produced by train_llm.py
 
 EPOCHS = 150
 EPISODES_PER_BATCH = 16
-MAX_NEW_TOKENS = 40
+MAX_NEW_TOKENS = 60
 TEMPERATURE = 1.0
 LR = 1e-5
 USE_BASELINE = True          # subtract batch-mean reward; variance reduction
 
 _ORDER = re.compile(r"<think>.*?</think>\s*<answer>.*?</answer>", re.DOTALL)
+
+PREFIX_WORDS = "that is a great question".split()
+SUFFIX_WORDS = "let me know if you have any other questions".split()
+
+
+def _words(text):
+    return re.sub(r"[^a-z ]", " ", text.lower()).split()
+
+
+def _prefix_match(w):
+    n = 0
+    for i, target in enumerate(PREFIX_WORDS):
+        if i < len(w) and w[i] == target:
+            n += 1
+        else:
+            break
+    return n
+
+
+def _suffix_match(w):
+    n = 0
+    for i, target in enumerate(reversed(SUFFIX_WORDS)):
+        if i < len(w) and w[-1 - i] == target:
+            n += 1
+        else:
+            break
+    return n
+
+
+def _wrapper_terminal(text):
+    w = _words(text)
+    return (_prefix_match(w) == len(PREFIX_WORDS)
+            and _suffix_match(w) == len(SUFFIX_WORDS))
+
+
+def _wrapper_reward(text):
+    w = _words(text)
+    r = 2.0 * _prefix_match(w) + 2.0 * _suffix_match(w)
+    r += 50.0 if _wrapper_terminal(text) else -10.0
+    return r
 
 # Each format: sub_rules give the +1/-3 shaping, terminal gives the +50/-10 bonus.
 FORMATS = {
@@ -81,15 +121,22 @@ FORMATS = {
         ],
         "terminal": lambda t: 0 < len(t.split()) <= 3,
     },
+    "wrapper": {
+        "describe": f"starts with '{' '.join(PREFIX_WORDS)}', ends with '{' '.join(SUFFIX_WORDS)}'",
+        "reward": _wrapper_reward,
+        "terminal": _wrapper_terminal,
+    },
 }
 
 
 def make_reward(name):
     spec = FORMATS[name]
+    if "reward" in spec:
+        return spec["reward"]
 
     def reward(text: str) -> float:
         r = 0.0
-        for rule in spec["sub_rules"]:            # Module 10: +1 satisfied, -3 violated
+        for rule in spec["sub_rules"]:
             r += 1.0 if rule(text) else -3.0
         r += 50.0 if spec["terminal"](text) else -10.0
         return r
@@ -137,16 +184,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--format", default="one_word", choices=sorted(FORMATS))
     ap.add_argument("--epochs", type=int, default=EPOCHS)
+    ap.add_argument("--base", default=str(BASE_DIR))
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
+    base_dir = Path(args.base)
     out_dir = Path(args.out or f"weights/gpt2_rl_{args.format}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    if not BASE_DIR.exists():
-        raise SystemExit(f"{BASE_DIR} not found -- run train_llm.py first.")
+    if not base_dir.exists():
+        raise SystemExit(f"{base_dir} not found -- run train_llm.py first.")
 
-    tokenizer = AutoTokenizer.from_pretrained(BASE_DIR)
-    model = AutoModelForCausalLM.from_pretrained(BASE_DIR).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(base_dir)
+    model = AutoModelForCausalLM.from_pretrained(base_dir).to(device)
     model.train()
 
     reward_fn = make_reward(args.format)
