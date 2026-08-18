@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir uv
 RUN uv pip install --system --no-cache torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Whole project: app/, weights/, and the course-reference model modules at the root
-# (energy_model.py / diffusion_model.py are imported directly by app/main.py)
+# (cnn_model.py / energy_model.py / diffusion_model.py are imported by app/main.py)
 COPY . .
 
 # Remaining deps come from pyproject.toml: fastapi, uvicorn, spacy, pillow, numpy

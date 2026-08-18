@@ -1,4 +1,6 @@
-# NOTE: weights/ is deliberately NOT ignored — the image ships the trained models.
+# NOTE: weights/ is deliberately NOT ignored - the image ships the trained models.
+# Exception: the GPT-2 checkpoints are 480 MB each and the API never loads them.
+weights/gpt2_*/
 .venv/
 data/
 .git/
