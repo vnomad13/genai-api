@@ -146,3 +146,50 @@ async def classify_image(file: UploadFile = File(...)):
         "confidence": round(float(probs[idx]), 4),
         "scores": {c: round(float(p), 4) for c, p in zip(CLASSES, probs)},
     }
+
+
+LLM_DIR = Path(__file__).parent.parent / "weights" / "gpt2_rl_wrapper"
+LLM_FALLBACK = Path(__file__).parent.parent / "weights" / "gpt2_squad"
+_llm = None
+_llm_tok = None
+
+
+def _load_llm():
+    global _llm, _llm_tok
+    if _llm is None:
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        path = LLM_DIR if LLM_DIR.exists() else LLM_FALLBACK
+        _llm_tok = AutoTokenizer.from_pretrained(path)
+        _llm = AutoModelForCausalLM.from_pretrained(path).eval()
+    return _llm, _llm_tok
+
+
+class TextGenerationRequest(BaseModel):
+    question: str
+    context: str | None = None
+    length: int = 60
+
+
+@app.post("/generate_with_llm")
+def generate_with_llm(request: TextGenerationRequest):
+    if not LLM_DIR.exists() and not LLM_FALLBACK.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="LLM weights not found. Run train_llm.py, cold_start.py, rl_format.py.",
+        )
+    model, tokenizer = _load_llm()
+
+    ctx = request.context or ""
+    prompt = f"Context: {ctx}\nQuestion: {request.question}\nAnswer:"
+    ids = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=256)
+
+    with torch.no_grad():
+        out = model.generate(
+            **ids,
+            max_new_tokens=request.length,
+            do_sample=True,
+            temperature=1.0,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    text = tokenizer.decode(out[0][ids.input_ids.shape[1]:], skip_special_tokens=True)
+    return {"generated_text": text.strip()}

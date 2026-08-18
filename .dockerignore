@@ -1,6 +1,8 @@
 # NOTE: weights/ is deliberately NOT ignored - the image ships the trained models.
-# Exception: the GPT-2 checkpoints are 480 MB each and the API never loads them.
+# Exception: only gpt2_rl_wrapper ships (served by /generate_with_llm); the other
+# GPT-2 checkpoints are 480 MB each and unused at runtime.
 weights/gpt2_*/
+!weights/gpt2_rl_wrapper/
 .venv/
 data/
 .git/
